@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOFTOPARKFTP</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ext-modelist.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <!-- Global Loader -->
+    <div id="global-loader" class="fixed inset-0 bg-gray-50 flex flex-col items-center justify-center transition-all duration-500" style="z-index: 9999;">
+        <i class="fas fa-shield-alt text-5xl text-blue-600 mb-4 animate-pulse"></i>
+        <h2 class="text-xl font-bold text-gray-800">SOFTOPARKFTP</h2>
+        <div class="w-64 bg-gray-200 rounded-full h-1 mt-4 overflow-hidden shadow-inner">
+            <div id="loader-progress" class="bg-blue-600 h-1 rounded-full" style="width: 5%; transition: width 0.3s ease;"></div>
+        </div>
+        <p id="loader-text" class="text-gray-500 text-xs mt-3 font-mono tracking-wide">Initializing secure session...</p>
+    </div>
+
+    <script>
+        // Fake "Enterprise" Loading Sequence
+        const loaderMsgs = [
+            "Initializing secure session...",
+            "Checking server configuration...",
+            "Establishing encrypted tunnel...",
+            "Verifying credentials...",
+            "Loading virtual file system..."
+        ];
+        let loaderIdx = 0;
+        const loaderText = document.getElementById('loader-text');
+        const loaderProgress = document.getElementById('loader-progress');
+        
+        window.loaderInterval = setInterval(() => {
+            loaderIdx++;
+            if (loaderIdx < loaderMsgs.length) {
+                if (loaderText) loaderText.textContent = loaderMsgs[loaderIdx];
+                if (loaderProgress) loaderProgress.style.width = (loaderIdx * 25) + "%";
+            }
+        }, 350);
+        
+        window.finishLoader = () => {
+            clearInterval(window.loaderInterval);
+            if (loaderProgress) loaderProgress.style.width = "100%";
+            if (loaderText) loaderText.textContent = "Connection established.";
+        };
+    </script>
+    <div id="login-screen" class="relative min-h-screen flex items-center justify-center hidden bg-gradient-to-br from-gray-900 to-blue-900">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 z-10">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4 shadow-inner">
+                    <i class="fas fa-server text-3xl text-blue-600"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">SOFTOPARK<span class="text-blue-600">FTP</span></h2>
+                <p class="text-sm text-gray-500 mt-2 font-medium">Sign in to manage your files securely</p>
+            </div>
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Hostname</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-globe text-gray-400"></i>
+                        </div>
+                        <input type="text" id="ftp-host" required class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-shadow outline-none text-gray-800">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Port</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-plug text-gray-400"></i>
+                        </div>
+                        <input type="number" id="ftp-port" value="21" required class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-shadow outline-none text-gray-800">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" id="ftp-user" required class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-shadow outline-none text-gray-800">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="ftp-pass" required class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-shadow outline-none text-gray-800">
+                    </div>
+                </div>
+                <div id="login-error" class="bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm hidden rounded-r font-medium"></div>
+                <button type="submit" class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all mt-6">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Connect Securely
+                </button>
+            </form>
+        </div>
+        <div class="absolute bottom-6 w-full text-center text-sm text-blue-200 z-10 font-medium tracking-wide">
+            Copyright &copy; 2026 <a href="https://nsykat.com/" target="_blank" class="text-white hover:text-blue-300 transition-colors font-bold underline decoration-blue-400 decoration-2 underline-offset-2">SOFTOPARKBD</a>. All Rights Reserved.
+        </div>
+    </div>
+    <div id="app-screen" class="hidden h-screen flex flex-col">
+        <header class="bg-gray-800 text-white p-4 flex justify-between items-center shadow-md">
+            <h1 class="text-xl font-semibold"><i class="fas fa-folder-open mr-2"></i> SOFTOPARKFTP</h1>
+            <button id="logout-btn" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </header>
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Sidebar Tree -->
+            <aside class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col hidden md:flex">
+                <div class="p-3 bg-gray-100 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
+                    Folders
+                </div>
+                <div class="flex-1 overflow-y-auto p-2">
+                    <ul id="tree-root" class="space-y-1">
+                        <!-- Tree items injected here -->
+                    </ul>
+                </div>
+            </aside>
+            
+            <!-- Main Content -->
+            <main class="flex-1 bg-white flex flex-col relative">
+                <div class="p-2 bg-gray-100 border-b flex items-center shadow-sm z-10">
+                    <button id="btn-up" class="p-2 hover:bg-gray-300 rounded text-gray-700 mr-2"><i class="fas fa-level-up-alt"></i></button>
+                    <input type="text" id="current-path" value="/" class="flex-1 p-1 border rounded px-2 text-sm bg-white" readonly>
+                    <button id="btn-refresh" class="p-2 hover:bg-gray-300 rounded text-gray-700 ml-2"><i class="fas fa-sync-alt"></i></button>
+                    <button id="btn-new-file" class="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded ml-2 text-sm font-medium flex items-center shadow-sm">
+                        <i class="fas fa-file-medical mr-2"></i> New File
+                    </button>
+                    <button id="btn-new-folder" class="p-2 bg-green-500 hover:bg-green-600 text-white rounded ml-2 text-sm font-medium flex items-center shadow-sm">
+                        <i class="fas fa-folder-plus mr-2"></i> New Folder
+                    </button>
+                    <button id="btn-bulk-delete" class="p-2 bg-red-500 hover:bg-red-600 text-white rounded ml-2 text-sm font-medium flex items-center hidden">
+                        <i class="fas fa-trash-alt mr-2"></i> Delete (<span id="bulk-delete-count">0</span>)
+                    </button>
+                    <label class="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded ml-2 cursor-pointer flex items-center text-sm font-medium">
+                        <i class="fas fa-upload mr-2"></i> Upload
+                        <input type="file" id="file-upload" class="hidden" multiple>
+                    </label>
+                </div>
+                <div class="flex-1 overflow-y-auto relative">
+                    <!-- Drop overlay for drag and drop -->
+                    <div id="drop-overlay" class="hidden absolute inset-0 bg-blue-100 bg-opacity-90 flex items-center justify-center border-4 border-dashed border-blue-500 z-40">
+                        <h2 class="text-2xl text-blue-800 font-bold"><i class="fas fa-cloud-upload-alt mr-2"></i> Drop files to upload</h2>
+                    </div>
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-100 sticky top-0 z-20 shadow-sm">
+                            <tr>
+                                <th class="p-2 border-b text-sm font-semibold text-gray-600 w-10 text-center"><input type="checkbox" id="selectAll"></th>
+                                <th class="p-2 border-b text-sm font-semibold text-gray-600">Name</th>
+                                <th class="p-2 border-b text-sm font-semibold text-gray-600 w-24">Size</th>
+                                <th class="p-2 border-b text-sm font-semibold text-gray-600 w-32">Date</th>
+                                <th class="p-2 border-b text-sm font-semibold text-gray-600 w-24">Perms</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-list"></tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+        <footer class="bg-gray-800 text-gray-400 text-xs py-2 text-center border-t border-gray-700">
+            Copyright &copy; 2026 <a href="https://nsykat.com/" target="_blank" class="text-blue-400 hover:text-blue-300 font-bold transition-colors">SOFTOPARKBD</a>. All Rights Reserved.
+        </footer>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="hidden fixed bg-white shadow-lg rounded border text-sm w-40 z-50">
+        <ul class="py-1 text-gray-700">
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer font-medium" id="ctx-download"><i class="fas fa-download w-4 text-indigo-500 mr-2"></i> Download</li>
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer" id="ctx-edit"><i class="fas fa-code w-4 text-gray-600 mr-2"></i> Edit Code</li>
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer" id="ctx-extract"><i class="fas fa-file-archive w-4 text-orange-500 mr-2"></i> Extract (Unzip)</li>
+            <div class="border-t my-1"></div>
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer" id="ctx-rename"><i class="fas fa-edit w-4 text-blue-500 mr-2"></i> Rename</li>
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer" id="ctx-move"><i class="fas fa-arrow-right w-4 text-green-500 mr-2"></i> Move</li>
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer" id="ctx-copy"><i class="fas fa-copy w-4 text-purple-500 mr-2"></i> Copy</li>
+            <li class="px-4 py-2 hover:bg-blue-100 cursor-pointer" id="ctx-chmod"><i class="fas fa-key w-4 text-yellow-600 mr-2"></i> CHMOD</li>
+            <div class="border-t my-1"></div>
+            <li class="px-4 py-2 hover:bg-red-100 cursor-pointer text-red-600" id="ctx-delete"><i class="fas fa-trash w-4 mr-2"></i> Delete</li>
+        </ul>
+    </div>
+
+    <!-- Code Editor Modal -->
+    <div id="editor-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col" style="z-index: 100;">
+        <div class="bg-gray-800 text-white p-3 flex justify-between items-center">
+            <span id="editor-filename" class="font-mono text-sm">Editing file</span>
+            <div>
+                <span id="editor-status" class="text-xs text-gray-400 mr-4"></span>
+                <button id="editor-btn-save" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded mr-2 text-sm font-medium"><i class="fas fa-save mr-1"></i> Save</button>
+                <button id="editor-btn-close" class="bg-gray-600 hover:bg-gray-700 px-4 py-1.5 rounded text-sm"><i class="fas fa-times mr-1"></i> Close</button>
+            </div>
+        </div>
+        <div class="flex-1 relative bg-[#272822]">
+            <div id="editor-container" class="absolute inset-0"></div>
+        </div>
+    </div>
+
+    <!-- Upload Progress Toast -->
+    <div id="upload-progress-container" class="hidden fixed bottom-6 right-6 w-80 bg-white rounded-lg shadow-2xl overflow-hidden border border-gray-200 z-50 flex flex-col">
+        <div class="bg-gray-800 text-white px-4 py-3 flex justify-between items-center">
+            <span class="font-semibold text-sm flex items-center">
+                <i class="fas fa-cloud-upload-alt mr-2 text-blue-400"></i> File Transfers
+            </span>
+        </div>
+        <div class="p-4 bg-gray-50">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-file-alt text-gray-400 text-2xl mr-3"></i>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-800 truncate" id="upload-filename">Uploading file...</div>
+                    <div class="text-xs text-gray-500 mt-1 flex justify-between">
+                        <span>Uploading...</span>
+                        <span id="upload-percent" class="font-bold text-blue-600">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-3 overflow-hidden">
+                <div id="upload-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index: 100;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 id="modal-title" class="text-lg font-bold mb-4 text-gray-800">Title</h3>
+            <div id="modal-body" class="mb-6 text-gray-700 text-sm"></div>
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
+                <button id="modal-confirm" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
+
